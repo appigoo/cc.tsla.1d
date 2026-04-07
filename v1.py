@@ -994,9 +994,9 @@ with st.sidebar:
     input_tickers     = st.text_input("股票代號（逗號分隔）",
                                        "TSLA, UVXY, UVIX, NIO, TSLL, XPEV, GLD, META, GOOGL, AAPL, NVDA, AMZN, TSM, MSFT")
     selected_period   = st.selectbox("時間範圍",
-                                      ["1d","5d","1mo","3mo","6mo","1y","2y","5y","ytd","max"], index=2)
+                                      ["1d","5d","1mo","3mo","6mo","1y","2y","5y","ytd","max"], index=5)
     selected_interval = st.selectbox("資料間隔",
-                                      ["1m","5m","15m","30m","60m","1h","1d","5d","1wk","1mo"], index=3)
+                                      ["1m","5m","15m","30m","60m","1h","1d","5d","1wk","1mo"], index=6)
     st.subheader("信號閾值")
     HIGH_N_HIGH_TH   = st.number_input("Close-to-High",     0.1, 1.0, 0.9, 0.1)
     LOW_N_LOW_TH     = st.number_input("Close-to-Low",      0.1, 1.0, 0.9, 0.1)
@@ -1360,8 +1360,46 @@ def _merge_dims_to_conds(
     return merged[_TG_COLS]
 
 
+# st.title("📊 股票監控儀表板")
+# st.caption(f"⏱ 更新時間：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+###
 st.title("📊 股票監控儀表板")
+
+# ── 總開關（置頂）────────────────────────────────────────────────────────────
+if "app_running" not in st.session_state:
+    st.session_state["app_running"] = False
+if "last_refresh" not in st.session_state:
+    st.session_state["last_refresh"] = 0.0
+
+col_btn1, col_btn2, col_status = st.columns([1, 1, 4])
+
+with col_btn1:
+    if not st.session_state["app_running"]:
+        if st.button("▶️ 啟動監控", type="primary", use_container_width=True):
+            st.session_state["app_running"] = True
+            st.session_state["last_refresh"] = time.time()
+            st.rerun()
+    else:
+        if st.button("⏹️ 停止監控", type="secondary", use_container_width=True):
+            st.session_state["app_running"] = False
+            st.rerun()
+
+with col_btn2:
+    if st.session_state["app_running"]:
+        if st.button("🔄 立即刷新", use_container_width=True):
+            st.session_state["last_refresh"] = time.time()
+            st.rerun()
+
+with col_status:
+    if st.session_state["app_running"]:
+        _elapsed = time.time() - st.session_state["last_refresh"]
+        _remaining = max(0, REFRESH_INTERVAL - int(_elapsed))
+        st.success(f"🟢 監控運行中　｜　下次刷新：**{_remaining}** 秒後", icon="📡")
+    else:
+        st.warning("⏸️ 已停止，調好參數後按啟動", icon="⚙️")
+
 st.caption(f"⏱ 更新時間：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+###
 
 # ── 全域 Telegram 開關 ────────────────────────────────────────────────────────
 if selected_tickers:
@@ -3043,73 +3081,9 @@ with tabs[-1]:
 
 #  AUTO REFRESH (FIX: replace while True + time.sleep with time.sleep + st.rerun)
 # ═════════════════════════════════════════════════════════════════════════════
-###
-# st.divider()
-# col_l, col_r = st.columns([4, 1])
-# with col_l:
-#     st.info(f"📡 頁面將在 **{REFRESH_INTERVAL}** 秒後自動刷新")
-# with col_r:
-#     if st.button("🔄 立即刷新"):
-#         st.rerun()
-
-# time.sleep(REFRESH_INTERVAL)
-# st.rerun()
-###
-# st.divider()
-# col_l, col_r = st.columns([4, 1])
-
-# if "last_refresh" not in st.session_state:
-#     st.session_state["last_refresh"] = time.time()
-
-# _elapsed = time.time() - st.session_state["last_refresh"]
-# _remaining = max(0, REFRESH_INTERVAL - int(_elapsed))
-
-# with col_l:
-#     st.info(f"📡 自動刷新倒計時：**{_remaining}** 秒（間隔 {REFRESH_INTERVAL} 秒）")
-# with col_r:
-#     if st.button("🔄 立即刷新"):
-#         st.session_state["last_refresh"] = time.time()
-#         st.rerun()
-
-# if _elapsed >= REFRESH_INTERVAL:
-#     st.session_state["last_refresh"] = time.time()
-#     st.rerun()
 st.divider()
 
-# ── 總開關 ────────────────────────────────────────────────────────────────────
-if "app_running" not in st.session_state:
-    st.session_state["app_running"] = False
-if "last_refresh" not in st.session_state:
-    st.session_state["last_refresh"] = 0.0
-
-col_btn1, col_btn2, col_status = st.columns([1, 1, 4])
-
-with col_btn1:
-    if not st.session_state["app_running"]:
-        if st.button("▶️ 啟動監控", type="primary", use_container_width=True):
-            st.session_state["app_running"] = True
-            st.session_state["last_refresh"] = time.time()
-            st.rerun()
-    else:
-        if st.button("⏹️ 停止監控", type="secondary", use_container_width=True):
-            st.session_state["app_running"] = False
-            st.rerun()
-
-with col_btn2:
-    if st.session_state["app_running"]:
-        if st.button("🔄 立即刷新", use_container_width=True):
-            st.session_state["last_refresh"] = time.time()
-            st.rerun()
-
-with col_status:
-    if st.session_state["app_running"]:
-        _elapsed = time.time() - st.session_state["last_refresh"]
-        _remaining = max(0, REFRESH_INTERVAL - int(_elapsed))
-        st.success(f"🟢 監控運行中　｜　下次刷新：**{_remaining}** 秒後", icon="📡")
-    else:
-        st.warning("⏸️ 監控已停止　｜　請調整好參數後按「▶️ 啟動監控」", icon="⚙️")
-
-# ── 自動刷新（只在啟動狀態下才執行）────────────────────────────────────────────
+# ── 自動刷新（只在啟動狀態下才執行）─────────────────────────────────────────
 if st.session_state["app_running"]:
     _elapsed = time.time() - st.session_state["last_refresh"]
     if _elapsed >= REFRESH_INTERVAL:
